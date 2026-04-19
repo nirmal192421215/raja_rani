@@ -1,0 +1,124 @@
+.result-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  padding-top: 40px;
+  position: relative;
+  overflow-y: auto;
+}
+
+.result-content {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 2;
+  animation: fadeInUp 0.5s ease-out;
+  padding-bottom: 80px;
+}
+
+.result-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.result-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.result-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+  position: relative;
+}
+
+.result-event:last-child { border-bottom: none; }
+
+.result-event--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.result-event-marker {
+  width: 3px;
+  height: 100%;
+  min-height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.result-event-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  animation: fadeInScale 0.4s ease-out;
+}
+
+.result-event-body {
+  flex: 1;
+}
+
+.result-event-text {
+  font-size: 0.88rem;
+  color: var(--text-on-dark);
+  line-height: 1.5;
+}
+
+/* Earnings preview */
+.result-earnings {
+  width: 100%;
+}
+
+.result-earnings-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-gold-light);
+  margin-bottom: 12px;
+}
+
+.result-earnings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-earning-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.06);
+}
+
+.result-earning-item:last-child { border-bottom: none; }
+
+.result-earning-name {
+  font-size: 0.82rem;
+  color: var(--text-on-dark);
+}
+
+.result-earning-value {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.result-continue {
+  width: 100%;
+}

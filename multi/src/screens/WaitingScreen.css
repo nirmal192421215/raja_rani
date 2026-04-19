@@ -1,0 +1,118 @@
+.waiting-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.waiting-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  z-index: 2;
+  animation: fadeInScale 0.5s ease-out;
+}
+
+.waiting-cards-shuffle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.waiting-shuffle-card {
+  margin-left: -20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.6;
+}
+
+.waiting-shuffle-card:first-child { margin-left: 0; }
+
+.waiting-shuffle-card--active {
+  opacity: 1;
+  filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.4));
+}
+
+.waiting-spinner-ring {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(212, 175, 55, 0.15);
+  border-top: 3px solid var(--color-gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waiting-spinner-inner {
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(123, 47, 247, 0.15);
+  border-bottom: 2px solid var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite reverse;
+}
+
+.waiting-text {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.03em;
+}
+
+.waiting-subtext {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: -12px;
+}
+
+.waiting-progress {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.waiting-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.waiting-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gradient-gold);
+  transition: width 0.5s ease-out;
+}
+
+.waiting-progress-label {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.waiting-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.waiting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  opacity: 0.3;
+  animation: wave 1.5s ease-in-out infinite;
+}
+
+.waiting-dot:nth-child(2) { animation-delay: 0.2s; }
+.waiting-dot:nth-child(3) { animation-delay: 0.4s; }

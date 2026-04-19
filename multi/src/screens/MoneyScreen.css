@@ -1,0 +1,161 @@
+.money-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  padding-top: 40px;
+  position: relative;
+  overflow-y: auto;
+}
+
+.money-content {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 2;
+  animation: fadeInUp 0.5s ease-out;
+  padding-bottom: 80px;
+}
+
+.money-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Scoreboard */
+.money-board {
+  width: 100%;
+  overflow: hidden;
+}
+
+.money-board-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 90px;
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+}
+
+.money-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 90px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.06);
+  animation: fadeInUp 0.4s ease-out both;
+  transition: background 0.2s;
+}
+
+.money-row:last-child { border-bottom: none; }
+
+.money-row:hover {
+  background: rgba(212, 175, 55, 0.04);
+}
+
+.money-row--top {
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.money-row--me {
+  background: rgba(123, 47, 247, 0.08);
+  border-left: 3px solid var(--color-accent);
+}
+
+.money-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.money-row-rank {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.85rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--color-gold-light);
+}
+
+.money-row-role-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.money-row-info {
+  min-width: 0;
+}
+
+.money-row-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-on-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.money-row-me-tag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(123, 47, 247, 0.2);
+  color: var(--color-accent-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.money-row-role-name {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.money-row-earnings {
+  text-align: right;
+}
+
+.money-row-round {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.money-row-round--positive { color: var(--color-success); }
+.money-row-round--zero { color: var(--text-muted); }
+
+.money-row-total {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--color-gold-light);
+  text-align: right;
+}
+
+.money-reshuffle-notice {
+  font-size: 0.82rem;
+  color: var(--color-gold);
+  padding: 8px 18px;
+  background: rgba(212, 175, 55, 0.08);
+  border-radius: 100px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  animation: fadeInScale 0.5s ease-out;
+}
+
+.money-actions {
+  width: 100%;
+}

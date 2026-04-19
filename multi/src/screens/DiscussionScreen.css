@@ -1,0 +1,225 @@
+.discussion-screen {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.discussion-content {
+  position: relative;
+  z-index: 10;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.discussion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.discussion-timer {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #10B981;
+}
+
+.discussion-timer--danger {
+  color: #EF4444;
+  animation: pulse 1s infinite alternate;
+}
+
+.discussion-evidence {
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 3px solid #7B2FF7;
+}
+
+.evidence-title {
+  color: #A78BFA;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.evidence-text {
+  font-size: 1.1rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.discussion-players-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 1rem;
+}
+
+.discussion-player-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(16, 24, 39, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.discussion-player-row:hover {
+  background: rgba(16, 24, 39, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.discussion-player-row--me {
+  border-color: rgba(123, 47, 247, 0.3);
+  background: rgba(123, 47, 247, 0.05);
+}
+
+.d-player-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  border: 2px solid;
+}
+
+.d-player-info {
+  flex: 1;
+}
+
+.d-player-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.d-player-claim {
+  font-size: 0.85rem;
+  color: #10B981;
+  margin-top: 0.25rem;
+}
+
+.d-player-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.d-vote-btn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.d-vote-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.d-vote-btn--trust.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10B981;
+  color: #10B981;
+}
+
+.d-vote-btn--accuse.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+.discussion-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1rem;
+}
+
+/* Modal */
+.claim-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.claim-modal {
+  max-width: 400px;
+  width: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+.claim-title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #FBBF24;
+}
+
+.claim-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1.5rem;
+}
+
+.claim-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.claim-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.claim-btn:hover {
+  background: rgba(123, 47, 247, 0.2);
+  border-color: #7B2FF7;
+}
+
+.claim-cancel {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  100% { opacity: 0.5; }
+}

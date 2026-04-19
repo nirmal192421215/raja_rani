@@ -1,0 +1,99 @@
+.create-room-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.create-room-content {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  z-index: 2;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.create-room-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-room-icon {
+  font-size: 3rem;
+  filter: drop-shadow(0 4px 12px rgba(212,175,55,0.3));
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+.create-room-card-deco {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rounds-selector {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.rounds-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 60px;
+  color: var(--text-on-dark);
+}
+
+.rounds-option:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.rounds-option--selected {
+  border-color: var(--color-gold) !important;
+  background: rgba(212, 175, 55, 0.15) !important;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.rounds-label {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--color-gold-light);
+}
+
+.rounds-sub {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.create-back {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 8px 16px;
+}
+
+.create-back:hover {
+  color: var(--color-gold);
+}

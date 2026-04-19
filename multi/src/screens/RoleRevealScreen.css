@@ -1,0 +1,121 @@
+.role-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-content {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 2;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.role-round-badge {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+.role-reshuffle-notice {
+  font-size: 0.85rem;
+}
+
+.role-card-area {
+  position: relative;
+  cursor: pointer;
+  padding: 20px;
+}
+
+.role-card-glow {
+  position: absolute;
+  inset: -20px;
+  border-radius: 24px;
+  opacity: 0;
+  background: radial-gradient(circle, var(--glow-color, rgba(212,175,55,0.3)), transparent 70%);
+  filter: blur(30px);
+  transition: opacity 0.8s ease-out;
+  pointer-events: none;
+}
+
+.role-card-glow--active {
+  opacity: 0.6;
+  animation: cardGlowPulse 2s ease-in-out infinite;
+}
+
+.role-tap-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  animation: fadeIn 0.5s ease-out 0.5s both;
+}
+
+.role-tap-icon {
+  animation: wave 1.5s ease-in-out infinite;
+  font-size: 1.1rem;
+}
+
+.role-revealed-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.role-revealed-badge {
+  padding: 8px 20px;
+  border-radius: 100px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.role-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.role-private-notice {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 100px;
+}
+
+.role-other-cards {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.role-other-card-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.role-other-name {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}

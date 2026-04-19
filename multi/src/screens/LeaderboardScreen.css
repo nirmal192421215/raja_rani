@@ -1,0 +1,243 @@
+.leaderboard-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  padding-top: 40px;
+  position: relative;
+  overflow-y: auto;
+}
+
+.leaderboard-content {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  z-index: 2;
+  animation: fadeInUp 0.6s ease-out;
+  padding-bottom: 40px;
+}
+
+.leaderboard-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.leaderboard-trophy {
+  font-size: 4rem;
+  filter: drop-shadow(0 4px 20px rgba(212,175,55,0.5));
+  animation: floatSlow 3s ease-in-out infinite;
+}
+
+.leaderboard-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Podium */
+.leaderboard-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0 0;
+  width: 100%;
+}
+
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.podium-item--1 { animation-delay: 0.3s; animation-fill-mode: both; }
+.podium-item--2 { animation-delay: 0.1s; animation-fill-mode: both; }
+.podium-item--3 { animation-delay: 0.5s; animation-fill-mode: both; }
+
+.podium-avatar-area {
+  position: relative;
+}
+
+.podium-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  font-family: var(--font-heading);
+}
+
+.podium-medal {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  font-size: 1.2rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.podium-player-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  text-align: center;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-player-money {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--color-gold);
+}
+
+.podium-stand {
+  width: 90px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border: 1px solid;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.6s ease-out;
+}
+
+.podium-stand-rank {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2rem;
+  opacity: 0.5;
+  color: var(--text-primary);
+}
+
+/* Full list */
+.leaderboard-list {
+  width: 100%;
+}
+
+.leaderboard-list-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-gold-light);
+  margin-bottom: 12px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.06);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s ease-out;
+}
+
+.leaderboard-row:last-child { border-bottom: none; }
+
+.leaderboard-row--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.leaderboard-row--winner {
+  background: rgba(212, 175, 55, 0.04);
+  padding: 10px 8px;
+  border-radius: 8px;
+  margin: 2px -8px;
+}
+
+.leaderboard-rank {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.9rem;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--color-gold-light);
+}
+
+.leaderboard-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.leaderboard-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.leaderboard-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-on-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-role-name {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.leaderboard-total {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--color-gold-light);
+  flex-shrink: 0;
+}
+
+.leaderboard-luck-msg {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.leaderboard-actions {
+  width: 100%;
+  max-width: 320px;
+}
+
+/* Confetti */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  bottom: -10px;
+  animation: confetti 3s ease-out both;
+}
+
+@media (max-width: 480px) {
+  .podium-stand { width: 75px; }
+  .podium-avatar { width: 46px; height: 46px; font-size: 1rem; }
+  .leaderboard-podium { gap: 8px; }
+}

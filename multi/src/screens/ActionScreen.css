@@ -1,0 +1,174 @@
+.action-screen {
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-thief-shadow {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.15) 100%);
+  animation: shadowPulse 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.action-center-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 320px;
+  margin-bottom: 20vh;
+}
+
+.action-instruction-card {
+  text-align: center;
+  padding: 16px 20px;
+  max-width: 300px;
+}
+
+.action-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.action-role-emoji {
+  font-size: 1.5rem;
+}
+
+.action-role-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.action-instruction-text {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-on-dark);
+  margin-bottom: 4px;
+}
+
+.action-instruction-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.action-police-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.action-selected-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-gold-light);
+  padding: 6px 14px;
+  background: rgba(212, 175, 55, 0.12);
+  border-radius: 100px;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  animation: fadeInScale 0.3s ease-out;
+}
+
+/* Investigation overlay */
+.action-investigate-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 60;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.action-investigate-icon {
+  font-size: 5rem;
+  animation: investigateSweep 1s ease-out;
+  filter: drop-shadow(0 4px 20px rgba(212,175,55,0.5));
+}
+
+/* Player grid fallback for small screens */
+.action-players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.action-player-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  cursor: pointer;
+  transition: all 0.3s;
+  color: var(--text-on-dark);
+}
+
+.action-player-btn:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.action-player-btn--selected {
+  border-color: rgba(123, 47, 247, 0.6) !important;
+  background: rgba(123, 47, 247, 0.15) !important;
+  box-shadow: 0 0 20px rgba(123, 47, 247, 0.25);
+}
+
+.action-player-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: var(--font-heading);
+}
+
+.action-player-name {
+  font-size: 0.72rem;
+  font-weight: 500;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-observe {
+  text-align: center;
+}
+
+.action-observe-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  animation: floatSlow 3s ease-in-out infinite;
+}
+
+.action-observe-text {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-on-dark);
+}
+
+.action-observe-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}

@@ -1,0 +1,123 @@
+.lobby-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  padding-top: 40px;
+  position: relative;
+  overflow-y: auto;
+}
+
+.lobby-content {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 2;
+  animation: fadeInUp 0.5s ease-out;
+  padding-bottom: 80px;
+}
+
+.lobby-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.lobby-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.lobby-code-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: -8px;
+}
+
+.lobby-card-spread {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.lobby-card-item {
+  margin-left: -18px;
+  transition: transform 0.3s;
+}
+
+.lobby-card-item:first-child { margin-left: 0; }
+
+.lobby-card-item:hover {
+  transform: translateY(-8px) rotate(0deg) !important;
+  z-index: 5;
+}
+
+.lobby-players-section {
+  width: 100%;
+}
+
+.lobby-players-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.lobby-players-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-gold-light);
+}
+
+.lobby-add-bot {
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--color-gold-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-heading);
+}
+
+.lobby-add-bot:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--color-gold);
+}
+
+.lobby-add-bot:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.player-join-anim {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.lobby-bottom {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lobby-min-notice {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--color-warning);
+  font-weight: 500;
+}
+
+.lobby-waiting-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  animation: floatSlow 3s ease-in-out infinite;
+}

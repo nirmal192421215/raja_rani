@@ -1,0 +1,22 @@
+{
+  "short_name": "Raja Rani",
+  "name": "Raja Rani: Money War",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "fullscreen",
+  "theme_color": "#7B2FF7",
+  "background_color": "#0B0C10",
+  "orientation": "portrait",
+  "description": "Multiplayer social deduction and role-playing game based on Raja Rani Chor Sipahi."
+}
