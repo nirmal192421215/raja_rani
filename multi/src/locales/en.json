@@ -1,0 +1,21 @@
+{
+  "home": {
+    "welcome": "Welcome back",
+    "quickPlay": "Quick Play",
+    "createRoom": "Create Room",
+    "orJoin": "or join a room",
+    "roomCodePlaceholder": "ROOM CODE",
+    "join": "Join",
+    "leaderboard": "Leaderboard",
+    "store": "Royal Store",
+    "logout": "Logout",
+    "findingMatch": "Finding Match..."
+  },
+  "roles": {
+    "raja": "Raja",
+    "rani": "Rani",
+    "mantri": "Mantri",
+    "police": "Police",
+    "thief": "Thief"
+  }
+}

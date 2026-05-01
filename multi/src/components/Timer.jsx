@@ -10,7 +10,6 @@ export default function Timer({ duration = 30, onComplete, size = 80 }) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(interval);
-          onComplete?.();
           return 0;
         }
         return prev - 1;
@@ -18,7 +17,14 @@ export default function Timer({ duration = 30, onComplete, size = 80 }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [duration, onComplete]);
+  }, [duration]);
+
+  // Trigger onComplete in a separate effect to avoid setState-during-render
+  useEffect(() => {
+    if (timeLeft === 0) {
+      onComplete?.();
+    }
+  }, [timeLeft, onComplete]);
 
   const radius = (size - 8) / 2;
   const circumference = 2 * Math.PI * radius;

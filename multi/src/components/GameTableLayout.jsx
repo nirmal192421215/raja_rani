@@ -1,5 +1,7 @@
 import CardComponent from './CardComponent';
 import { getAvatarColor, getInitials } from '../engine/GameEngine';
+import { useGame } from '../context/GameContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function GameTableLayout({
   players = [],
@@ -10,256 +12,179 @@ export default function GameTableLayout({
   centerContent,
   children,
 }) {
-  // Find my player and others
+  const { activeEmotes, totals = {} } = useGame();
+
   const myPlayer = players.find(p => p.id === myPlayerId);
   const otherPlayers = players.filter(p => p.id !== myPlayerId);
+  const count = otherPlayers.length; // number of opponents
 
-  // Assign positions: bottom = me, top = first other, left = second, right = third
-  const positions = ['top', 'left', 'right'];
-  const seatPlayers = positions.map((pos, i) => ({
-    position: pos,
-    player: otherPlayers[i] || null,
-  }));
+  /**
+   * Place opponents evenly on the TOP HALF of an ellipse.
+   * angle=0 is right, angle=180 is left.
+   * We go from 20° to 160° (top arc) evenly spaced.
+   */
+  const getPosition = (index, total) => {
+    // arc from 210° to 330° (top semi-circle, left-to-right)
+    const startAngle = 210;
+    const endAngle = 330;
+    const range = endAngle - startAngle;
+    const step = total <= 1 ? 0 : range / (total - 1);
+    const angleDeg = startAngle + index * step;
+    const angleRad = (angleDeg * Math.PI) / 180;
 
-  // Extra players beyond 4
-  const extraPlayers = otherPlayers.slice(3);
+    // Ellipse radii as percentage of container
+    const rx = 40; // horizontal radius %
+    const ry = 34; // vertical radius %
 
-  const renderSeat = (player, position) => {
+    const x = 50 + rx * Math.cos(angleRad);
+    const y = 46 + ry * Math.sin(angleRad); // shifted up slightly
+    return { x, y };
+  };
+
+  const renderSeat = (player, index, total, isMe = false) => {
     if (!player) return null;
 
     const color = getAvatarColor(player.colorIndex || 0);
     const isSelected = selectedPlayerId === player.id;
-    const canClick = !!onPlayerClick;
+    const canClick = !!onPlayerClick && !isMe;
 
-    const isVertical = position === 'left' || position === 'right';
-    const cardCount = Math.min(3, Math.max(1, Math.floor(players.length / 2)));
+    let style = {};
+    if (isMe) {
+      // Always at bottom center, with enough space from center panel
+      style = {
+        position: 'absolute',
+        bottom: '4%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 4,
+      };
+    } else {
+      const { x, y } = getPosition(index, total);
+      style = {
+        position: 'absolute',
+        left: `${x}%`,
+        top: `${y}%`,
+        transform: 'translate(-50%, -50%)',
+        zIndex: 4,
+      };
+    }
 
     return (
       <div
-        className={`game-table-seat game-table-seat--${position}`}
         key={player.id}
-        onClick={canClick ? () => onPlayerClick(player.id) : undefined}
+        className={`gtl-seat ${isMe ? 'gtl-seat--me' : ''} ${isSelected ? 'gtl-seat--selected' : ''}`}
         style={{
+          ...style,
           cursor: canClick ? 'pointer' : 'default',
-          filter: isSelected ? 'brightness(1.2)' : 'none',
         }}
+        onClick={canClick ? () => onPlayerClick(player.id) : undefined}
       >
+        {/* Card — above avatar for opponents, below for me */}
+        {!isMe && (
+          <div className="gtl-card">
+            <CardComponent
+              size="sm"
+              flipped={showRoles}
+              role={showRoles ? player.roleData : null}
+              animated
+              dealDelay={0.1 * index}
+            />
+          </div>
+        )}
+
         {/* Avatar */}
         <div
-          className="seat-avatar"
+          className="gtl-avatar"
           style={{
             background: `${color}30`,
             color: color,
             borderColor: isSelected ? '#7B2FF7' : `${color}80`,
             boxShadow: isSelected
-              ? `0 0 20px rgba(123,47,247,0.5), 0 2px 12px rgba(0,0,0,0.3)`
+              ? `0 0 20px rgba(123,47,247,0.6), 0 2px 12px rgba(0,0,0,0.4)`
               : `0 2px 12px rgba(0,0,0,0.3)`,
           }}
         >
           {getInitials(player.name)}
           {player.isBot && (
-            <span style={{
-              position: 'absolute', bottom: -2, right: -2,
-              fontSize: '0.6rem', background: 'rgba(0,0,0,0.6)',
-              borderRadius: '50%', width: 16, height: 16,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>🤖</span>
+            <span className="gtl-bot-badge">🤖</span>
           )}
         </div>
 
-        {/* Name */}
-        <div className="seat-name">{player.name}</div>
+        {/* Floating emote */}
+        <AnimatePresence>
+          {activeEmotes?.[player.id] && (
+            <motion.div
+              className="gtl-emote"
+              initial={{ y: 0, opacity: 0, scale: 0.5 }}
+              animate={{ y: -50, opacity: 1, scale: 2 }}
+              exit={{ y: -80, opacity: 0, scale: 0.8 }}
+              transition={{ duration: 1.5, type: 'spring' }}
+            >
+              {activeEmotes[player.id]}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Role badge if revealed */}
+        {/* Name */}
+        <div className="gtl-name">
+          {isMe ? `${player.name} (You)` : player.name}
+        </div>
+
+        {/* Money badge */}
+        <div className="gtl-money">
+          ₹{(totals[player.id] || 0).toLocaleString()}
+        </div>
+
+        {/* Role badge */}
         {showRoles && player.roleData && (
           <div
-            className="seat-role-badge"
+            className="gtl-role"
             style={{
-              background: `${player.roleData.color}25`,
+              background: `${player.roleData.color}20`,
               color: player.roleData.color,
-              border: `1px solid ${player.roleData.color}50`,
+              border: `1px solid ${player.roleData.color}60`,
             }}
           >
             {player.roleData.emoji} {player.roleData.name}
           </div>
         )}
 
-        {/* Card fan */}
-        <div className={`card-fan ${isVertical ? 'card-fan--vertical' : 'card-fan--horizontal'}`}>
-          {Array.from({ length: cardCount }, (_, i) => (
-            <div
-              key={i}
-              className="card-fan-item"
-              style={{
-                transform: isVertical
-                  ? `rotate(${(i - 1) * 5}deg)`
-                  : `rotate(${(i - Math.floor(cardCount / 2)) * 8}deg)`,
-              }}
-            >
-              <CardComponent
-                size="sm"
-                flipped={showRoles}
-                role={showRoles ? player.roleData : null}
-                animated
-                dealDelay={i * 0.15}
-              />
-            </div>
-          ))}
-        </div>
+        {/* My card at bottom */}
+        {isMe && (
+          <div className="gtl-card gtl-card--me">
+            <CardComponent
+              size="md"
+              flipped={showRoles}
+              role={showRoles ? player.roleData : null}
+              animated
+              dealDelay={0.3}
+            />
+          </div>
+        )}
 
-        {/* Selection indicator */}
+        {/* Selection ring */}
         {isSelected && (
-          <div style={{
-            position: 'absolute',
-            inset: -6,
-            border: '2px solid rgba(123, 47, 247, 0.5)',
-            borderRadius: '16px',
-            animation: 'cardGlowPulse 1.5s ease-in-out infinite',
-            pointerEvents: 'none',
-          }} />
+          <div className="gtl-selection-ring" />
         )}
       </div>
     );
   };
 
   return (
-    <div className="game-table">
-      {/* Top seat */}
-      {renderSeat(seatPlayers[0]?.player, 'top')}
+    <div className="gtl-table">
+      {/* Ellipse decorative ring */}
+      <div className="gtl-ellipse-ring" />
 
-      {/* Left seat */}
-      {renderSeat(seatPlayers[1]?.player, 'left')}
-
-      {/* Right seat */}
-      {renderSeat(seatPlayers[2]?.player, 'right')}
-
-      {/* Center content (Bid buttons, timer, etc.) */}
-      <div className="game-table-center">
+      {/* Center panel — timer, role info, buttons */}
+      <div className="gtl-center">
         {centerContent}
       </div>
 
-      {/* Bottom seat (ME) */}
-      {myPlayer && (
-        <div className="game-table-seat game-table-seat--bottom">
-          <div className={`card-fan card-fan--horizontal`}>
-            {Array.from({ length: Math.min(5, players.length) }, (_, i) => (
-              <div
-                key={i}
-                className="card-fan-item"
-                style={{
-                  transform: `rotate(${(i - 2) * 6}deg) translateY(${Math.abs(i - 2) * 4}px)`,
-                }}
-              >
-                <CardComponent
-                  size="md"
-                  flipped={showRoles}
-                  role={showRoles ? myPlayer.roleData : null}
-                  animated
-                  dealDelay={0.3 + i * 0.1}
-                />
-              </div>
-            ))}
-          </div>
+      {/* Opponents around the top arc */}
+      {otherPlayers.map((p, i) => renderSeat(p, i, otherPlayers.length, false))}
 
-          <div className="seat-avatar" style={{
-            background: `${getAvatarColor(myPlayer.colorIndex || 0)}30`,
-            color: getAvatarColor(myPlayer.colorIndex || 0),
-            borderColor: `${getAvatarColor(myPlayer.colorIndex || 0)}80`,
-          }}>
-            {getInitials(myPlayer.name)}
-          </div>
-          <div className="seat-name">{myPlayer.name} (You)</div>
-
-          {showRoles && myPlayer.roleData && (
-            <div
-              className="seat-role-badge"
-              style={{
-                background: `${myPlayer.roleData.color}25`,
-                color: myPlayer.roleData.color,
-                border: `1px solid ${myPlayer.roleData.color}50`,
-              }}
-            >
-              {myPlayer.roleData.emoji} {myPlayer.roleData.name}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Extra players beyond 4 — show as mini seats along the table  */}
-      {/* FIX BUG-09: Was pointerEvents:'none' on parent, blocking Police from clicking */}
-      {extraPlayers.length > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          display: 'flex',
-          gap: '60px',
-          zIndex: 2,
-        }}>
-          {extraPlayers.map((ep, i) => {
-            const isSelected = selectedPlayerId === ep.id;
-            const epColor = getAvatarColor(ep.colorIndex || 0);
-            return (
-              <div
-                key={ep.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 4,
-                  opacity: 0.8,
-                  cursor: onPlayerClick ? 'pointer' : 'default',
-                  filter: isSelected ? 'brightness(1.2)' : 'none',
-                  position: 'relative',
-                }}
-                onClick={onPlayerClick ? () => onPlayerClick(ep.id) : undefined}
-              >
-                <div className="seat-avatar" style={{
-                  width: 36, height: 36, fontSize: '0.8rem',
-                  background: `${epColor}30`,
-                  color: epColor,
-                  borderColor: isSelected ? '#7B2FF7' : `${epColor}80`,
-                  boxShadow: isSelected
-                    ? `0 0 20px rgba(123,47,247,0.5), 0 2px 12px rgba(0,0,0,0.3)`
-                    : `0 2px 12px rgba(0,0,0,0.3)`,
-                }}>
-                  {getInitials(ep.name)}
-                </div>
-                <span className="seat-name" style={{ fontSize: '0.6rem' }}>{ep.name}</span>
-
-                {/* Role badge if revealed */}
-                {showRoles && ep.roleData && (
-                  <div
-                    className="seat-role-badge"
-                    style={{
-                      background: `${ep.roleData.color}25`,
-                      color: ep.roleData.color,
-                      border: `1px solid ${ep.roleData.color}50`,
-                      fontSize: '0.55rem',
-                      padding: '2px 6px',
-                    }}
-                  >
-                    {ep.roleData.emoji} {ep.roleData.name}
-                  </div>
-                )}
-
-                {/* Selection indicator */}
-                {isSelected && (
-                  <div style={{
-                    position: 'absolute',
-                    inset: -4,
-                    border: '2px solid rgba(123, 47, 247, 0.5)',
-                    borderRadius: '12px',
-                    animation: 'cardGlowPulse 1.5s ease-in-out infinite',
-                    pointerEvents: 'none',
-                  }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Me at bottom */}
+      {myPlayer && renderSeat(myPlayer, 0, 1, true)}
 
       {children}
     </div>

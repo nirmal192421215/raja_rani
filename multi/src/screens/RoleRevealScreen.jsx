@@ -6,6 +6,7 @@ import CardComponent from '../components/CardComponent';
 import { SparkleEffect } from '../components/ParticleEffects';
 import { API_BASE } from '../services/api';
 import { vibrate, HAPTICS } from '../utils/haptics';
+import { playReveal, playClick } from '../engine/SoundEngine';
 import './RoleRevealScreen.css';
 
 export default function RoleRevealScreen() {
@@ -29,12 +30,14 @@ export default function RoleRevealScreen() {
 
   const handleFlip = () => {
     if (!flipped) {
+      playReveal();
       setFlipped(true);
       vibrate(HAPTICS.REVEAL);
     }
   };
 
   const handleReady = async () => {
+    playClick();
     // Navigate immediately for responsive UX
     setPhase('discussion');
     navigate('/discussion');

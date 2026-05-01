@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: '*', // Allow all for local dev
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
@@ -41,26 +41,81 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // ─── HELPERS ──────────────────────────────────────────────────────────
 
+// Helper to get user (handles both mock and DB mode)
+async function getUser(id) {
+  if (!DB_READY) {
+    if (!mockUsers.has(id)) {
+      mockUsers.set(id, {
+        id,
+        _id: id,
+        name: "Guest",
+        totalEarnings: 0,
+        wins: 0,
+        gamesPlayed: 0,
+        xp: 0,
+        level: 1
+      });
+    }
+    return mockUsers.get(id);
+  }
+  
+  if (mongoose.isValidObjectId(id)) {
+    return await User.findById(id);
+  }
+  return await User.findOne({ googleId: id });
+}
+
 // Get room from DB or mock
 async function getRoom(code) {
   if (!DB_READY) return mockRooms.get(code) || null;
   return await Room.findOne({ code });
 }
 
-// Save room to DB (no-op in mock mode)
-async function saveRoom(room) {
-  if (DB_READY && typeof room.save === 'function') {
+// Save room to DB with retry mechanism for VersionErrors
+async function saveRoom(room, retries = 3) {
+  if (!DB_READY || typeof room.save !== 'function') return;
+  
+  try {
     room.markModified('players');
     room.markModified('lastResult');
     room.markModified('pendingActions');
     room.markModified('roundHistory');
+    room.markModified('phaseReadyPlayers');
     await room.save();
+  } catch (err) {
+    if (err.name === 'VersionError' && retries > 0) {
+      console.warn(`[RETRY] VersionError on room ${room.code}. Retrying... (${retries} left)`);
+      // Re-fetch the latest version from DB
+      const latest = await Room.findOne({ code: room.code });
+      if (latest) {
+        // Merge pending changes if necessary, or just apply logic again.
+        // For simplicity here, we'll just try to save the current object 
+        // after updating its version, but Mongoose usually requires a fresh object.
+        // Better: let the caller handle retries if they are doing complex logic.
+        // But for most cases, we'll just try once more after a small delay.
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const freshRoom = await Room.findOne({ code: room.code });
+        // Re-apply critical fields from the 'failed' room to the fresh one
+        freshRoom.currentPhase = room.currentPhase;
+        freshRoom.phaseReadyPlayers = room.phaseReadyPlayers;
+        freshRoom.lastResult = room.lastResult;
+        freshRoom.pendingActions = room.pendingActions;
+        freshRoom.roundHistory = room.roundHistory;
+        freshRoom.status = room.status;
+        freshRoom.players = room.players;
+        return await saveRoom(freshRoom, retries - 1);
+      }
+    }
+    console.error(`❌ SaveRoom Failed: ${err.message}`);
+    throw err;
   }
 }
 
 // ─── ROLES & GAME ENGINE ──────────────────────────────────────────────
 
 const ROLE_DISTRIBUTIONS = {
+  2: ['raja', 'thief'],
+  3: ['raja', 'police', 'thief'],
   4: ['raja', 'rani', 'police', 'thief'],
   5: ['raja', 'rani', 'mantri', 'police', 'thief'],
   6: ['raja', 'rani', 'mantri', 'soldier', 'police', 'thief'],
@@ -69,6 +124,7 @@ const ROLE_DISTRIBUTIONS = {
   9: ['raja', 'rani', 'mantri', 'soldier', 'milkman', 'police', 'police', 'thief', 'thief'],
   10: ['raja', 'rani', 'mantri', 'soldier', 'milkman', 'gardener', 'police', 'police', 'thief', 'thief']
 };
+
 
 const ROLE_POINTS = {
   'raja': 500,
@@ -86,16 +142,24 @@ const BOT_PERSONALITIES = ['DETECTIVE', 'GAMBLER', 'ANALYST', 'ROOKIE'];
 // Helper to assign roles
 const assignRoles = (players) => {
   const count = players.length;
-  const clamped = Math.min(Math.max(count, 4), 10);
+  const clamped = Math.min(Math.max(count, 2), 10);
   const roles = [...ROLE_DISTRIBUTIONS[clamped]];
 
-  // Shuffle roles (Fisher-Yates)
+
+  // 1. Shuffle roles (Fisher-Yates)
   for (let i = roles.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [roles[i], roles[j]] = [roles[j], roles[i]];
   }
 
-  return players.map((p, i) => ({
+  // 2. Shuffle players list as well to double-randomize
+  const shuffledPlayers = [...players];
+  for (let i = shuffledPlayers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledPlayers[i], shuffledPlayers[j]] = [shuffledPlayers[j], shuffledPlayers[i]];
+  }
+
+  return shuffledPlayers.map((p, i) => ({
     ...p,
     role: roles[i],
     roleData: {
@@ -115,52 +179,49 @@ const BOT_CLAIMS_TENDENCY = {
 };
 
 /**
- * Bot Police AI — uses Bayesian-like anomaly detection and personality matrices
+ * Bot Police AI — uses difficulty settings to make smarter decisions
  */
 function botPoliceDecision(room, botPlayer) {
-  const suspects = room.players.filter(p => p.id !== botPlayer.id && p.role !== 'police');
+  const difficulty = room.botDifficulty || 'rookie';
+  let suspects = room.players.filter(p => p.id !== botPlayer.id && p.role !== 'police');
   if (suspects.length === 0) return null;
 
-  const personality = botPlayer.personality || BOT_PERSONALITIES[Math.floor(Math.random() * BOT_PERSONALITIES.length)];
-  const history = room.roundHistory || [];
-
-  switch (personality) {
-    case 'DETECTIVE': {
-      // Tracks anomaly: Who hasn't been thief yet? ("Gambler's Fallacy" logic)
-      const thiefCounts = {};
-      suspects.forEach(s => { thiefCounts[s.id] = 0; });
-      history.forEach(round => {
-        if (round.targetId && suspects.find(s => s.id === round.targetId) && round.isCorrect) {
-          thiefCounts[round.targetId] = (thiefCounts[round.targetId] || 0) + 1;
-        }
-      });
-      // Sort ascending, pick the one who has been thief LEAST
-      const sorted = suspects.sort((a, b) => (thiefCounts[a.id] || 0) - (thiefCounts[b.id] || 0));
-      return sorted[0];
-    }
-    case 'ANALYST': {
-      // Avoids whoever was targeted last round
-      if (history.length > 0) {
-        const lastTarget = history[history.length - 1]?.targetId;
-        const filtered = suspects.filter(s => s.id !== lastTarget);
-        if (filtered.length > 0) return filtered[Math.floor(Math.random() * filtered.length)];
-      }
-      return suspects[Math.floor(Math.random() * suspects.length)];
-    }
-    case 'GAMBLER': {
-      // Always picks random, highly unpredictable
-      return suspects[Math.floor(Math.random() * suspects.length)];
-    }
-    default: // ROOKIE
-      // Tends to latch onto one person over and over
-      if (history.length > 0 && Math.random() > 0.5) {
-        const lastTarget = suspects.find(s => s.id === history[history.length - 1]?.targetId);
-        if (lastTarget) return lastTarget;
-      }
-      return suspects[Math.floor(Math.random() * suspects.length)];
+  // Pro/Expert bots are smart enough to know the Raja is never the thief
+  if (difficulty === 'pro' || difficulty === 'expert') {
+    suspects = suspects.filter(p => p.role !== 'raja');
   }
-}
 
+  if (suspects.length === 0) return room.players.find(p => p.id !== botPlayer.id); // fallback
+
+  if (difficulty === 'expert') {
+    // Expert bots target the richest players (who likely win a lot)
+    // or players who have been thief often.
+    const history = room.roundHistory || [];
+    const thiefCounts = {};
+    suspects.forEach(s => { thiefCounts[s.id] = 0; });
+    
+    history.forEach(round => {
+      if (round.targetId && suspects.find(s => s.id === round.targetId) && round.isCorrect) {
+        thiefCounts[round.targetId] = (thiefCounts[round.targetId] || 0) + 1;
+      }
+    });
+
+    // We also look at their overall score for the current match if available
+    const scores = room.totals || {};
+    
+    suspects.sort((a, b) => {
+      const aDanger = (thiefCounts[a.id] || 0) * 1000 + (scores[a.id] || 0);
+      const bDanger = (thiefCounts[b.id] || 0) * 1000 + (scores[b.id] || 0);
+      return bDanger - aDanger; // Descending order of danger
+    });
+
+    // 80% chance to pick the most "dangerous" suspect
+    if (Math.random() < 0.8) return suspects[0];
+  }
+
+  // Default/Rookie/Fallback behavior: random selection among valid suspects
+  return suspects[Math.floor(Math.random() * suspects.length)];
+}
 // Triggers bots to participate in the Discussion phase
 function simulateBotDiscussion(io, room) {
   const bots = room.players.filter(p => p.isBot);
@@ -301,29 +362,18 @@ app.post('/api/user/stats', async (req, res) => {
   try {
     const { userId, earnings, isWin } = req.body;
     
-    if (!DB_READY) {
-      return res.status(200).json({ success: true, message: "Stats mock updated" });
-    }
-    
-    // userId will be custom Object ID or google sub
-    let user = null;
-    if (mongoose.isValidObjectId(userId)) {
-      user = await User.findById(userId);
-    }
-    
-    if (!user) {
-        user = await User.findOne({ googleId: userId });
-    }
-
+    const user = await getUser(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.totalEarnings += Number(earnings || 0);
-    user.gamesPlayed += 1;
-    if (isWin) {
-      user.wins += 1;
-    }
+    user.totalEarnings = (user.totalEarnings || 0) + Number(earnings || 0);
+    user.gamesPlayed = (user.gamesPlayed || 0) + 1;
+    if (isWin) user.wins = (user.wins || 0) + 1;
 
-    await user.save();
+    if (DB_READY && typeof user.save === 'function') {
+      await user.save();
+    } else {
+      mockUsers.set(userId, user);
+    }
     res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Stats update error:', error);
@@ -336,29 +386,95 @@ app.get('/api/user/profile/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
-    if (!DB_READY) {
-      return res.status(200).json({ 
-        success: true, 
-        user: { _id: userId, name: "Guest", totalEarnings: 0, gamesPlayed: 0, wins: 0 } 
-      });
-    }
-
-    let user = null;
-    
-    if (mongoose.isValidObjectId(userId)) {
-      user = await User.findById(userId);
-    }
-    
-    if (!user) {
-      user = await User.findOne({ googleId: userId });
-    }
-    
+    const user = await getUser(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
-    
     res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ success: false, message: 'Server error fetching profile' });
+  }
+});
+
+// ─── Phase 3: Global Leaderboard ─────────────────────────────
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const tab = req.query.tab || 'earnings';
+    let sortField = { totalEarnings: -1 };
+    if (tab === 'wins')  sortField = { wins: -1 };
+    if (tab === 'level') sortField = { level: -1, xp: -1 };
+
+    const users = await User.find({})
+      .sort(sortField)
+      .limit(20)
+      .select('name picture totalEarnings wins gamesPlayed elo xp level policeCorrect thiefEscapes createdAt')
+      .lean();
+
+    const ranked = users.map((u, i) => ({
+      rank:          i + 1,
+      id:            u._id.toString(),
+      name:          u.name,
+      picture:       u.picture || null,
+      totalEarnings: u.totalEarnings || 0,
+      wins:          u.wins || 0,
+      gamesPlayed:   u.gamesPlayed || 0,
+      elo:           u.elo || 1200,
+      xp:            u.xp || 0,
+      level:         u.level || 1,
+      policeCorrect: u.policeCorrect || 0,
+      thiefEscapes:  u.thiefEscapes || 0,
+      winRate:       u.gamesPlayed > 0 ? Math.round((u.wins / u.gamesPlayed) * 100) : 0,
+    }));
+
+    res.json({ success: true, tab, players: ranked });
+  } catch (err) {
+    console.error('[LEADERBOARD] Error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ─── Phase 4: Store & Monetization ───────────────────────────
+app.post('/api/store/purchase', async (req, res) => {
+  try {
+    const { userId, itemId, price } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.rajaCoins < price) {
+      return res.status(400).json({ message: "Not enough Raja Coins" });
+    }
+
+    if (user.ownedCosmetics.includes(itemId)) {
+      return res.status(400).json({ message: "Item already owned" });
+    }
+
+    user.rajaCoins -= price;
+    user.ownedCosmetics.push(itemId);
+    await user.save();
+
+    res.json({ success: true, coins: user.rajaCoins, owned: user.ownedCosmetics });
+  } catch (err) {
+    console.error('[STORE] Purchase Error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+app.post('/api/store/equip', async (req, res) => {
+  try {
+    const { userId, itemId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.ownedCosmetics.includes(itemId)) {
+      return res.status(400).json({ message: "Item not owned" });
+    }
+
+    user.equippedCosmetic = itemId;
+    await user.save();
+
+    res.json({ success: true, equipped: user.equippedCosmetic });
+  } catch (err) {
+    console.error('[STORE] Equip Error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -367,7 +483,7 @@ app.get('/api/user/profile/:userId', async (req, res) => {
 // Create Room
 app.post('/api/room/create', async (req, res) => {
   try {
-    const { code, hostId, hostName, totalRounds } = req.body;
+    const { code, hostId, hostName, totalRounds, botDifficulty } = req.body;
 
     if (!code || !hostId || !hostName) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -378,6 +494,7 @@ app.post('/api/room/create', async (req, res) => {
         code,
         hostId,
         totalRounds: totalRounds || 5,
+        botDifficulty: botDifficulty || 'rookie',
         players: [{
           id: hostId,
           name: hostName,
@@ -408,6 +525,7 @@ app.post('/api/room/create', async (req, res) => {
       code,
       hostId,
       totalRounds: totalRounds || 5,
+      botDifficulty: botDifficulty || 'rookie',
       players: [{
         id: hostId,
         name: hostName,
@@ -481,6 +599,111 @@ app.post('/api/room/join', async (req, res) => {
   } catch (error) {
     console.error('Room join error:', error);
     res.status(500).json({ success: false, message: 'Server error joining room' });
+  }
+});
+
+// Add Bot to Room
+app.post('/api/room/add-bot', async (req, res) => {
+  try {
+    const { code, bot } = req.body;
+    if (!code || !bot) return res.status(400).json({ success: false, message: 'Missing fields' });
+
+    let room = await getRoom(code);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+
+    if (room.players.length >= 10) {
+      return res.status(400).json({ success: false, message: 'Room full' });
+    }
+
+    // Ensure unique name
+    let name = bot.name;
+    let nameCounter = 1;
+    while (room.players.find(p => p.name === name)) {
+      const baseName = bot.name.split(' ')[0];
+      name = `${baseName} ${nameCounter++}`;
+    }
+
+    // Add bot to players list
+    room.players.push({
+      ...bot,
+      name,
+      isBot: true,
+      isReady: true // Bots are always ready
+    });
+
+    await saveRoom(room);
+    
+    // Broadcast update
+    broadcastPersonalized(io, code, room);
+    
+    res.status(200).json({ success: true, room: sanitizeRoomForPlayer(room, room.hostId) });
+  } catch (err) {
+    console.error('Add bot error:', err);
+    res.status(500).json({ success: false });
+  }
+});
+
+// ─── QUICK MATCH (Matchmaking - Sprint 5) ───────────────────────────
+app.post('/api/room/quick-match', async (req, res) => {
+  try {
+    const { playerId, playerName } = req.body;
+    console.log(`[QUICK-MATCH] Request from ${playerName} (${playerId})`);
+    if (!playerId) return res.status(400).json({ success: false, message: 'Missing playerId' });
+
+    let roomCode = null;
+    
+    // Find an open room that is still in "lobby" and has space
+    if (DB_READY) {
+      const openRoom = await Room.findOne({ status: 'lobby', 'players.3': { $exists: false } }).sort({ createdAt: -1 });
+      if (openRoom) roomCode = openRoom.code;
+    } else {
+      for (const [code, r] of mockRooms.entries()) {
+        if (r.status === 'lobby' && r.players.length < 4) {
+          roomCode = code;
+          break;
+        }
+      }
+    }
+
+    // If no room found, CREATE ONE instead of failing! (FIX Q01)
+    if (!roomCode) {
+      console.log(`No open lobby for Quick Play. Creating new one for ${playerName}`);
+      roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const newRoom = {
+        code: roomCode,
+        hostId: playerId,
+        hostName: playerName,
+        status: 'lobby',
+        players: [{ id: playerId, name: playerName, isHost: true, isReady: true }],
+        currentRound: 0,
+        totalRounds: 5,
+        currentPhase: 'waiting',
+        createdAt: new Date()
+      };
+
+      // Auto-add 3 bots for an instant 4-player game (Sprint 5 Feature)
+      const botNames = ["Arjun", "Zara", "Vikram", "Ishita", "Rahul", "Priya"];
+      for (let i = 0; i < 3; i++) {
+        const botName = botNames[Math.floor(Math.random() * botNames.length)] + " (AI)";
+        newRoom.players.push({
+          id: `bot_${Math.random().toString(36).substr(2, 9)}`,
+          name: botName,
+          isBot: true,
+          isReady: true
+        });
+      }
+
+      if (DB_READY) {
+        await new Room(newRoom).save();
+      } else {
+        mockRooms.set(roomCode, newRoom);
+      }
+    }
+
+    res.status(200).json({ success: true, code: roomCode });
+  } catch (err) {
+    console.error('Quick match error:', err);
+    res.status(500).json({ success: false, message: 'Matchmaking failed' });
   }
 });
 
@@ -598,6 +821,98 @@ app.post('/api/room/ready', async (req, res) => {
       } else {
         // Game finished
         room.status = 'finished';
+
+        // --- MATCHMAKING & ELO ENGINE (Sprint 4 & 5) ---
+        if (DB_READY) {
+          try {
+            // Calculate totals from history
+            const totals = {};
+            room.roundHistory.forEach(rh => {
+              if (rh.earnings) {
+                Object.entries(rh.earnings).forEach(([id, amt]) => {
+                  totals[id] = (totals[id] || 0) + amt;
+                });
+              }
+            });
+            
+            // Sort to find winners
+            const sorted = Object.keys(totals)
+              .map(id => ({ id, score: totals[id] }))
+              .sort((a,b) => b.score - a.score);
+            
+          // Apply standard +/- Elo based on rank + Phase 2 XP
+          const XP_REWARDS = { GAME_PLAYED: 10, WIN_GAME: 50, CATCH_THIEF: 30, ESCAPE_AS_THIEF: 25 };
+          const LEVEL_THRESHOLDS = [0,100,250,450,700,1000,1400,1900,2500,3200,4000,5000,6200,7600,9200,11000,13000,15500,18500,22000,26000,31000,37000,44000,52000,61000,72000,85000,100000,120000];
+          const getLevelFromXP = (xp) => {
+            let level = 1;
+            for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+              if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1;
+              else break;
+            }
+            return Math.min(level, LEVEL_THRESHOLDS.length);
+          };
+
+          // Build per-round catch/escape tallies
+          const policeCatches  = {};
+          const thiefEscapes   = {};
+          room.roundHistory.forEach(rh => {
+            if (rh.isCorrect && rh.policeId && !rh.policeId.startsWith('bot_')) {
+              policeCatches[rh.policeId] = (policeCatches[rh.policeId] || 0) + 1;
+            }
+            if (!rh.isCorrect && rh.thiefId && !rh.thiefId.startsWith('bot_')) {
+              thiefEscapes[rh.thiefId] = (thiefEscapes[rh.thiefId] || 0) + 1;
+            }
+          });
+
+          for (let i = 0; i < sorted.length; i++) {
+             const player = sorted[i];
+             if (player.id.startsWith('bot_')) continue;
+
+             const user = await User.findById(player.id).catch(() => null);
+             if (user) {
+               const rank = i + 1;
+               let eloChange = -20;
+               if (rank === 1) eloChange = 30;
+               else if (rank === 2) eloChange = 10;
+               else if (rank === 3) eloChange = -5;
+
+               user.elo = (user.elo || 1200) + eloChange;
+               if (rank === 1) user.wins = (user.wins || 0) + 1;
+               user.gamesPlayed    = (user.gamesPlayed || 0) + 1;
+               user.totalEarnings  = (user.totalEarnings || 0) + player.score;
+               user.policeCorrect  = (user.policeCorrect || 0) + (policeCatches[player.id] || 0);
+               user.thiefEscapes   = (user.thiefEscapes || 0) + (thiefEscapes[player.id] || 0);
+               user.highestRoundEarning = Math.max(user.highestRoundEarning || 0, player.score);
+
+               // Award XP & Coins
+               let gainedXP = XP_REWARDS.GAME_PLAYED;
+               let gainedCoins = 15; // GAME_PLAYED
+               
+               if (rank === 1) {
+                 gainedXP += XP_REWARDS.WIN_GAME;
+                 gainedCoins += 50; // WIN_GAME
+               }
+               
+               const catches = (policeCatches[player.id] || 0);
+               const escapes = (thiefEscapes[player.id] || 0);
+               
+               gainedXP += catches * XP_REWARDS.CATCH_THIEF;
+               gainedXP += escapes * XP_REWARDS.ESCAPE_AS_THIEF;
+               gainedCoins += catches * 20; // CATCH_THIEF
+               gainedCoins += escapes * 25; // ESCAPE_AS_THIEF
+
+               user.xp = (user.xp || 0) + gainedXP;
+               user.level = getLevelFromXP(user.xp);
+               user.rajaCoins = (user.rajaCoins || 0) + gainedCoins;
+
+               await user.save();
+               console.log(`[REWARDS] ${user.name}: +${gainedXP} XP → Lv ${user.level} | +${gainedCoins} Coins`);
+             }
+          }
+          } catch (eloErr) {
+            console.error('Elo calculation failed:', eloErr);
+          }
+        }
       }
     }
 
@@ -642,6 +957,7 @@ app.post('/api/room/phase-ready', async (req, res) => {
       if (!currentRoom) return res.status(404).json({ success: false, message: 'Room not found' });
       
       if (currentRoom.currentPhase !== phase) {
+        console.log(`[PHASE-RESET] Room ${code} moving from ${currentRoom.currentPhase} to ${phase}. Clearing ready players.`);
         await Room.updateOne({ code }, { $set: { phaseReadyPlayers: [], currentPhase: phase } });
       }
       
@@ -658,26 +974,68 @@ app.post('/api/room/phase-ready', async (req, res) => {
 
     // Count only human (non-bot) players
     const humanPlayers = room.players.filter(p => !p.isBot);
-    const allReady = room.phaseReadyPlayers.length >= humanPlayers.length;
+    const readyCount = room.phaseReadyPlayers.length;
+    const allReady = readyCount >= humanPlayers.length;
 
-    // If everyone is ready for 'result' phase, transition to 'money' phase
+    console.log(`[PHASE-READY] Room: ${code}, Phase: ${phase}, Ready: ${readyCount}/${humanPlayers.length}, AllReady: ${allReady}`);
+
+    // If everyone is ready for 'action' phase (meaning non-police clicked Continue),
+    // and all human police have acted, trigger resolution.
+    if (allReady && phase === 'action') {
+      const allPolice = room.players.filter(p => p.role === 'police');
+      const humanPolice = allPolice.filter(p => !p.isBot);
+      
+      // A human police has "acted" if they submitted an action OR if they just clicked Continue (skip)
+      const humanPoliceActed = humanPolice.every(p => {
+        const hasAction = room.pendingActions && room.pendingActions[p.id];
+        const isReady = room.phaseReadyPlayers.includes(p.id);
+        return hasAction || isReady;
+      });
+
+      if (humanPoliceActed) {
+        console.log(`All humans ready/acted in action phase for room: ${code}. Resolving...`);
+        
+        // Auto-resolve bot police
+        const botPolice = allPolice.filter(p => p.isBot);
+        for (const bot of botPolice) {
+          if (!room.pendingActions[bot.id]) {
+            const botTarget = botPoliceDecision(room, bot);
+            if (botTarget) room.pendingActions[bot.id] = botTarget.id;
+          }
+        }
+
+        const result = resolveAction(room);
+        room.lastResult = result;
+        room.currentPhase = 'result';
+        room.phaseReadyPlayers = [];
+        if (!room.roundHistory) room.roundHistory = [];
+        room.roundHistory.push({ round: room.currentRound, ...result });
+
+        await saveRoom(room);
+        broadcastPersonalized(io, code, room, 'result');
+        io.to(code).emit('round_result', result);
+      }
+    }
+
+    // If everyone is ready for 'result' phase, automatically advance to next round
     if (allReady && phase === 'result') {
-      console.log(`All players ready for money board in room: ${code}. Transitioning...`);
-      room.currentPhase = 'money';
-      room.phaseReadyPlayers = [];
-      await saveRoom(room);
+      console.log(`All players ready for next round in room: ${code}. Advancing from result...`);
+      // Double check if we should go to leaderboard instead
+      if (room.currentRound >= (room.totalRounds || 5)) {
+         room.currentPhase = 'leaderboard';
+         room.status = 'finished';
+         await saveRoom(room);
+         broadcastPhaseChange(io, code, room, 'leaderboard');
+         broadcastPersonalized(io, code, room, 'leaderboard');
+
+      } else {
+         setTimeout(async () => {
+           await triggerAdvanceRound(code);
+         }, 500);
+      }
     }
 
-    // Broadcast personalized update
-    broadcastPersonalized(io, code, room);
-
-    // If everyone is ready for 'money' phase, automatically advance to next round
-    if (allReady && phase === 'money') {
-      console.log(`All players ready for next round in room: ${code}. Advancing...`);
-      setTimeout(() => triggerAdvanceRound(code), 500);
-    }
-
-    // If everyone is ready for 'leaderboard', mark game as finished
+    // Handle leaderboard finish
     if (allReady && phase === 'leaderboard') {
       room.status = 'finished';
       await saveRoom(room);
@@ -685,8 +1043,8 @@ app.post('/api/room/phase-ready', async (req, res) => {
 
     res.status(200).json({
       success: true,
-      allReady: allReady || (phase === 'result' && room.currentPhase === 'money'),
-      readyCount: room.phaseReadyPlayers.length,
+      allReady: allReady,
+      readyCount: readyCount,
       totalCount: humanPlayers.length
     });
   } catch (error) {
@@ -735,11 +1093,19 @@ app.post('/api/room/advance-round', async (req, res) => {
   }
 });
 
+const advancingRooms = new Set();
+
 // Extracted internal helper to trigger round advancement
 const triggerAdvanceRound = async (code) => {
+  if (advancingRooms.has(code)) return null;
+  advancingRooms.add(code);
+
   try {
     let room = await getRoom(code);
-    if (!room) return null;
+    if (!room) {
+      advancingRooms.delete(code);
+      return null;
+    }
 
     // Prevent multiple advancements
     if (room.currentPhase === 'roleReveal' && room.phaseReadyPlayers.length === 0) {
@@ -749,7 +1115,11 @@ const triggerAdvanceRound = async (code) => {
     if (room.currentRound >= (room.totalRounds || 5)) {
       room.status = 'finished';
       room.currentPhase = 'leaderboard';
+      await saveRoom(room);
+      broadcastPhaseChange(io, code, room, 'leaderboard');
+      broadcastPersonalized(io, code, room, 'leaderboard');
     } else {
+
       room.currentRound += 1;
       const plainPlayers = DB_READY && room.players[0]?.toObject
         ? room.players.map(p => p.toObject()) 
@@ -782,9 +1152,11 @@ const triggerAdvanceRound = async (code) => {
       }
     }
     
+    advancingRooms.delete(code);
     return room;
   } catch (error) {
     console.error('Trigger advance round error:', error);
+    advancingRooms.delete(code);
     return null;
   }
 };
@@ -944,7 +1316,7 @@ function resolveAction(room) {
       return;
     }
 
-    if (target.role === 'thief') {
+    if (target && target.role === 'thief') {
       // Correct guess!
       caughtThieves.add(target.id);
       const policeReward = Math.round(400 * multiplier);
@@ -1098,6 +1470,12 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server & Sockets running on http://localhost:${PORT}`);
-});
+// Only start server if not in a serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`🚀 Server & Sockets running on http://localhost:${PORT}`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;

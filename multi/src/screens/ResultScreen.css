@@ -3,10 +3,11 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px;
-  padding-top: 40px;
+  padding: 30px 20px;
+  padding-top: 80px; /* Increased to prevent top clipping */
   position: relative;
   overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .result-content {
@@ -25,7 +26,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .result-events {
@@ -82,41 +84,63 @@
 /* Earnings preview */
 .result-earnings {
   width: 100%;
+  padding: 16px !important;
+  background: rgba(20, 20, 20, 0.4) !important;
+  border: 1px solid rgba(212, 175, 55, 0.15) !important;
 }
 
 .result-earnings-title {
   font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-gold);
+  margin-bottom: 16px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.result-earnings-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  font-size: 0.7rem;
   font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--color-gold-light);
-  margin-bottom: 12px;
+  text-transform: uppercase;
+  color: var(--color-gold-muted);
+  letter-spacing: 0.1em;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 10px;
 }
 
 .result-earnings-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .result-earning-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.06);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
 }
 
-.result-earning-item:last-child { border-bottom: none; }
-
-.result-earning-name {
-  font-size: 0.82rem;
-  color: var(--text-on-dark);
+.result-total-value {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-gold);
+  text-align: right;
 }
 
 .result-earning-value {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  text-align: right;
+  padding-right: 10px;
 }
 
 .result-continue {

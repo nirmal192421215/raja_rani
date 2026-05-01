@@ -97,3 +97,45 @@
 .create-back:hover {
   color: var(--color-gold);
 }
+
+.difficulty-selector {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.diff-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+  color: var(--text-muted);
+}
+
+.diff-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.diff-option--selected {
+  border-color: var(--color-gold) !important;
+  background: rgba(212, 175, 55, 0.1) !important;
+  color: var(--text-on-dark);
+}
+
+.diff-icon {
+  font-size: 1.4rem;
+}
+
+.diff-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.8rem;
+}

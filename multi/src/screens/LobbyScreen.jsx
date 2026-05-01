@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
+import { useToast } from '../components/Toast';
 import AnimatedBackground from '../components/AnimatedBackground';
 import PlayerCard from '../components/PlayerCard';
 import CardComponent from '../components/CardComponent';
@@ -10,6 +11,7 @@ import './LobbyScreen.css';
 export default function LobbyScreen() {
   const { room, players, isHost, addBot, startGame, phase, myPlayerId, user } = useGame();
   const navigate = useNavigate();
+  const toast = useToast();
 
   useEffect(() => {
     if (phase === 'roleReveal') {
@@ -22,7 +24,7 @@ export default function LobbyScreen() {
     return null;
   }
 
-  const canStart = players.length >= 4;
+  const canStart = players.length >= 2;
 
   const handleStart = async () => {
     await startGame();
@@ -30,6 +32,13 @@ export default function LobbyScreen() {
 
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(room.code);
+    toast.success(`Room code “${room.code}” copied!`);
+  };
+
+  const handleShareLink = () => {
+    const link = `${window.location.origin}/home?join=${room.code}`;
+    navigator.clipboard?.writeText(link);
+    toast.success('Invite link copied! Share it with friends 😊');
   };
 
   return (
@@ -50,9 +59,12 @@ export default function LobbyScreen() {
         <div className="room-code" onClick={handleCopyCode} title="Click to copy" id="room-code-display">
           {room.code}
         </div>
-        <p className="lobby-code-hint">Tap code to copy · Share with friends</p>
-
-
+        <div className="lobby-code-actions">
+          <p className="lobby-code-hint">Tap code to copy · Share with friends</p>
+          <button className="lobby-share-btn" onClick={handleShareLink} id="share-invite-btn">
+            🔗 Copy Invite Link
+          </button>
+        </div>
 
         <div className="lobby-players-section glass-card">
           <div className="lobby-players-header">
@@ -85,7 +97,7 @@ export default function LobbyScreen() {
         <div className="lobby-bottom">
           {!canStart && (
             <p className="lobby-min-notice">
-              ⚠️ Need at least 4 players to start
+              ⚠️ Need at least 2 players to start
             </p>
           )}
 

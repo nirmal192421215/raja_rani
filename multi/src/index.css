@@ -720,121 +720,205 @@ input {
   box-shadow: var(--shadow-card-hover);
 }
 
-/* ─── Game Table Layout ────────────────────────────────────────── */
-.game-table {
+/* ─── Game Table Layout (GTL) ──────────────────────────────────── */
+.gtl-table {
   position: relative;
   width: 100%;
-  max-width: 900px;
-  height: 100vh;
-  max-height: 700px;
-  margin: 0 auto;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Center area */
-.game-table-center {
+/* Decorative ellipse ring behind players */
+.gtl-ellipse-ring {
   position: absolute;
-  top: 50%;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 84%;
+  height: 76%;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: radial-gradient(ellipse at center,
+    rgba(212, 175, 55, 0.03) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Center panel — perfectly centered, no overlap */
+.gtl-center {
+  position: absolute;
+  top: 44%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   z-index: 5;
+  width: 280px;
+  max-width: 90vw;
+  pointer-events: all;
 }
 
-/* Player seats */
-.game-table-seat {
-  position: absolute;
+/* Each seat — positioned by JS */
+.gtl-seat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  z-index: 3;
+  gap: 4px;
+  transition: filter 0.2s;
 }
 
-.game-table-seat--top {
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+.gtl-seat--selected {
+  filter: brightness(1.3) drop-shadow(0 0 12px rgba(123,47,247,0.6));
 }
 
-.game-table-seat--bottom {
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+/* My seat at bottom — bigger, more prominent */
+.gtl-seat--me {
+  gap: 6px;
 }
 
-.game-table-seat--left {
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.game-table-seat--right {
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* Card fan container */
-.card-fan {
-  display: flex;
-  position: relative;
-  justify-content: center;
-}
-
-.card-fan--horizontal .card-fan-item {
-  margin-left: -25px;
-  transition: transform 0.3s ease;
-}
-
-.card-fan--horizontal .card-fan-item:first-child { margin-left: 0; }
-
-.card-fan--vertical {
-  flex-direction: column;
-}
-
-.card-fan--vertical .card-fan-item {
-  margin-top: -50px;
-  transition: transform 0.3s ease;
-}
-
-.card-fan--vertical .card-fan-item:first-child { margin-top: 0; }
-
-/* Seat avatar */
-.seat-avatar {
-  width: 50px;
-  height: 50px;
+/* Avatar circle */
+.gtl-avatar {
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-family: var(--font-heading);
-  border: 3px solid rgba(212, 175, 55, 0.5);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  border: 2.5px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
   position: relative;
+  flex-shrink: 0;
 }
 
-.seat-name {
+.gtl-seat--me .gtl-avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 1.2rem;
+  border-width: 3px;
+  border-color: rgba(212, 175, 55, 0.8);
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3), 0 2px 12px rgba(0,0,0,0.4);
+}
+
+/* Bot badge */
+.gtl-bot-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 0.55rem;
+  background: rgba(0,0,0,0.7);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Card holder */
+.gtl-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gtl-card--me {
+  margin-top: 4px;
+}
+
+/* Floating emote */
+.gtl-emote {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 50;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+}
+
+/* Player name */
+.gtl-name {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-on-dark);
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   text-align: center;
   max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
   padding: 2px 8px;
   border-radius: 6px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 
+.gtl-seat--me .gtl-name {
+  font-size: 0.82rem;
+  max-width: 110px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--color-gold-light);
+}
+
+/* Money badge */
+.gtl-money {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  font-family: var(--font-heading);
+  background: rgba(10,10,10,0.85);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 8px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.gtl-seat--me .gtl-money {
+  font-size: 0.9rem;
+  padding: 3px 12px;
+  background: rgba(0,0,0,0.9);
+  border-color: rgba(212, 175, 55, 0.6);
+  border-width: 1.5px;
+}
+
+/* Role badge */
+.gtl-role {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  text-align: center;
+  font-family: var(--font-heading);
+  white-space: nowrap;
+}
+
+/* Selection ring around seat */
+.gtl-selection-ring {
+  position: absolute;
+  inset: -8px;
+  border: 2px solid rgba(123, 47, 247, 0.6);
+  border-radius: 16px;
+  animation: cardGlowPulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* Keep old seat-role-badge for backward compat */
 .seat-role-badge {
   font-size: 0.65rem;
   font-weight: 600;
@@ -1435,9 +1519,73 @@ input {
   .room-code { font-size: 2rem; }
   .podium-bar { width: 75px; }
   .chat-panel { width: 100%; }
-  .game-table { max-height: 500px; }
+
+  /* GTL mobile adjustments */
+  .gtl-avatar { width: 38px; height: 38px; font-size: 0.85rem; }
+  .gtl-seat--me .gtl-avatar { width: 48px; height: 48px; font-size: 1rem; }
+  .gtl-name { font-size: 0.62rem; max-width: 60px; }
+  .gtl-money { font-size: 0.62rem; padding: 1px 6px; }
+  .gtl-center { width: 220px; }
+  .action-center-panel { max-width: 220px; gap: 8px; }
+  .action-instruction-card { padding: 10px 12px; }
 }
 
 @media (max-width: 360px) {
   .chat-panel { height: 70vh; }
+  .gtl-avatar { width: 32px; height: 32px; font-size: 0.75rem; }
+  .gtl-name { font-size: 0.55rem; }
+}
+
+/* ─── Toast Notifications ──────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 320px;
+  width: calc(100vw - 40px);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(14, 14, 18, 0.97);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  animation: toastSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: all;
+}
+
+.toast-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-on-dark);
+  line-height: 1.4;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }

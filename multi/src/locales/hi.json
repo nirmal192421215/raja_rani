@@ -1,0 +1,21 @@
+{
+  "home": {
+    "welcome": "वापसी पर स्वागत है",
+    "quickPlay": "तुरंत खेलें",
+    "createRoom": "कमरा बनाएं",
+    "orJoin": "या कमरे में शामिल हों",
+    "roomCodePlaceholder": "रूम कोड",
+    "join": "जुड़ें",
+    "leaderboard": "लीडरबोर्ड",
+    "store": "शाही दुकान",
+    "logout": "लॉग आउट",
+    "findingMatch": "मैच खोज रहे हैं..."
+  },
+  "roles": {
+    "raja": "राजा",
+    "rani": "रानी",
+    "mantri": "मंत्री",
+    "police": "पुलिस",
+    "thief": "चोर"
+  }
+}

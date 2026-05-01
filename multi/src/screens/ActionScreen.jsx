@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function ActionScreen() {
   const {
     players, myPlayerId, currentRound, totalRounds, user,
-    submitAction, setPhase, totals,
+    submitAction, setPhase, totals, phaseReady,
   } = useGame();
   const navigate = useNavigate();
   const [selectedTarget, setSelectedTarget] = useState(null);
@@ -34,7 +34,7 @@ export default function ActionScreen() {
   const isPolice = myPlayer.role === 'police';
   const isThief = myPlayer.role === 'thief';
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (submitted) return;
     setSubmitted(true);
     vibrate(HAPTICS.SUBMIT);
@@ -43,13 +43,19 @@ export default function ActionScreen() {
       submitAction(myPlayerId, selectedTarget);
       setShowInvestigate(true);
       setTimeout(() => setShowInvestigate(false), 1500);
+      
+      // Also mark as phase ready to help trigger resolution
+      setTimeout(() => phaseReady('action'), 1000);
+    } else {
+      // Non-police roles just mark as ready immediately
+      await phaseReady('action');
     }
 
     setTimeout(() => {
       setPhase('waiting');
       navigate('/waiting');
     }, isPolice ? 1500 : 300);
-  }, [submitted, isPolice, selectedTarget, submitAction, myPlayerId, setPhase, navigate]);
+  }, [submitted, isPolice, selectedTarget, submitAction, myPlayerId, setPhase, navigate, phaseReady]);
 
   const handleTimerComplete = useCallback(() => {
     if (!submitted) handleSubmit();
@@ -130,13 +136,13 @@ export default function ActionScreen() {
             </div>
           )}
           <button
-            className="btn btn--primary"
+            className={`btn ${selectedTarget ? 'btn--primary' : 'btn--secondary'}`}
             onClick={handleSubmit}
-            disabled={!selectedTarget || submitted}
+            disabled={submitted}
             id="confirm-action-btn"
             style={{ maxWidth: '280px' }}
           >
-            {submitted ? '✅ Submitted' : '🔍 Confirm Investigation'}
+            {submitted ? '✅ Submitted' : (selectedTarget ? '🔍 Confirm Investigation' : '⏭️ Skip & Continue')}
           </button>
         </div>
       )}
@@ -183,17 +189,6 @@ export default function ActionScreen() {
         selectedPlayerId={selectedTarget}
         centerContent={centerContent}
       />
-
-      {/* Score Panel — FIX BUG-07: Shows actual totals instead of ₹0 */}
-      <div className="score-panel">
-        <div className="score-panel-title">📊 Current Score</div>
-        {players.slice(0, 5).map(p => (
-          <div key={p.id} className="score-panel-row">
-            <span>{p.name}</span>
-            <span className="score-panel-value">₹{(totals[p.id] || 0).toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
 
       <ChatBox
         players={players}

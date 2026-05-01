@@ -2,7 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import AnimatedBackground from '../components/AnimatedBackground';
+import { CoinShower } from '../components/ParticleEffects';
 import ChatBox from '../components/ChatBox';
+import { playClick, playCoin, playWin, playLose } from '../engine/SoundEngine';
 import './ResultScreen.css';
 
 export default function ResultScreen() {
@@ -12,12 +14,28 @@ export default function ResultScreen() {
   const [readyCount, setReadyCount] = useState(0);
   const [totalCount, setTotalCount] = useState(1);
   const [visibleEvents, setVisibleEvents] = useState(0);
+  const [showCoins, setShowCoins] = useState(true);
   const pollingRef = useRef(null);
+
+  const isLastRound = currentRound >= totalRounds;
+
+  // Stop coins after 3s
+  useEffect(() => {
+    const t = setTimeout(() => setShowCoins(false), 3000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Wait for round results data
   useEffect(() => {
-    if (!roundResult && phase !== 'money') {
+    if (!roundResult && phase !== 'roleReveal' && phase !== 'leaderboard') {
        // Optional: fetch or wait, but don't kick home during a valid round
+    } else if (roundResult) {
+       // Play win/lose sound based on my earnings
+       const myEarnings = roundResult.earnings?.[myPlayerId] || 0;
+       if (myEarnings > 0) playWin();
+       else if (myEarnings <= 0) playLose();
+
+       if (showCoins) playCoin();
     }
   }, [roundResult, phase]);
 
@@ -36,10 +54,12 @@ export default function ResultScreen() {
 
   // Global Navigation Sync: Listen for phase changes from GameContext (sockets)
   useEffect(() => {
-    if (phase === 'money') {
-       navigate('/money');
+    if (phase === 'roleReveal' && !isLastRound) {
+       navigate('/role-reveal');
+    } else if (phase === 'leaderboard' && isLastRound) {
+       navigate('/leaderboard');
     }
-  }, [phase, navigate]);
+  }, [phase, isLastRound, navigate]);
 
   // Poll phase status if we are waiting (still useful for UI count)
   useEffect(() => {
@@ -54,11 +74,11 @@ export default function ResultScreen() {
 
   const handleContinue = async () => {
     if (waiting) return;
+    playClick();
     setWaiting(true);
 
     if (!room) {
-      setPhase('money');
-      navigate('/money');
+      navigate(isLastRound ? '/leaderboard' : '/role-reveal');
       return;
     }
 
@@ -67,8 +87,7 @@ export default function ResultScreen() {
     setTotalCount(result.totalCount || 1);
     if (result.allReady) {
       clearInterval(pollingRef.current);
-      setPhase('money');
-      navigate('/money');
+      if (isLastRound) navigate('/leaderboard');
     }
   };
 
@@ -87,6 +106,7 @@ export default function ResultScreen() {
   return (
     <div className="result-screen">
       <AnimatedBackground />
+      <CoinShower active={showCoins} duration={3000} />
       <div className="result-content">
         <div className="result-header">
           <div className="round-indicator" style={{ marginBottom: '8px' }}>
@@ -123,13 +143,19 @@ export default function ResultScreen() {
           )}
         </div>
 
-        {/* Earnings preview */}
+        {/* Earnings & Standings preview */}
         {roundResult && (
           <div className="result-earnings glass-card">
-            <div className="result-earnings-title">💰 Round Earnings</div>
+            <div className="result-earnings-title">📊 Standings After Round {currentRound}</div>
+            <div className="result-earnings-header">
+               <span>Player</span>
+               <span>Earned</span>
+               <span>Total</span>
+            </div>
             <div className="result-earnings-grid">
               {players.map(p => {
                 const earned = roundResult.earnings[p.id] || 0;
+                const total = useGame().totals[p.id] || 0;
                 return (
                   <div key={p.id} className="result-earning-item">
                     <span className="result-earning-name">
@@ -141,6 +167,9 @@ export default function ResultScreen() {
                     >
                       {earned > 0 ? '+' : ''}₹{earned.toLocaleString()}
                     </span>
+                    <span className="result-total-value">
+                      ₹{total.toLocaleString()}
+                    </span>
                   </div>
                 );
               })}
@@ -151,11 +180,11 @@ export default function ResultScreen() {
         <div className="result-continue">
           {!waiting ? (
             <button
-              className="btn btn--gold btn--lg"
+              className="btn btn--gold btn--lg btn--pulse"
               onClick={handleContinue}
               id="result-continue-btn"
             >
-              💰 View Money Board
+              {isLastRound ? '🏆 View Final Results' : '🔄 Reshuffle & Continue'}
             </button>
           ) : (
             <div style={{ textAlign: 'center' }}>

@@ -8,6 +8,54 @@
   overflow: hidden;
 }
 
+.home-top-right {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.home-top-left {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+}
+
+.language-select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-on-dark);
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(8px);
+}
+
+.language-select option {
+  background: var(--bg-dark);
+  color: var(--text-on-dark);
+}
+
+.home-top-right:hover {
+  transform: scale(1.05);
+}
+
+.home-coin-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212,175,55,0.15);
+  border: 1px solid rgba(212,175,55,0.3);
+  padding: 6px 14px;
+  border-radius: 99px;
+  backdrop-filter: blur(8px);
+}
 
 
 .home-content {

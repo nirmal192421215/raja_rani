@@ -36,7 +36,33 @@
 .lobby-code-hint {
   font-size: 0.72rem;
   color: var(--text-muted);
-  margin-top: -8px;
+  margin: 0;
+}
+
+.lobby-code-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: -6px;
+}
+
+.lobby-share-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  background: rgba(123,47,247,0.1);
+  border: 1px solid rgba(123,47,247,0.3);
+  color: #a78bfa;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-heading);
+}
+
+.lobby-share-btn:hover {
+  background: rgba(123,47,247,0.2);
+  border-color: #7B2FF7;
 }
 
 .lobby-card-spread {

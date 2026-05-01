@@ -2,7 +2,7 @@
 // RAJA RANI: MONEY WAR — Game Context
 // =============================================
 
-import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect, useRef, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { io } from 'socket.io-client';
 import {
@@ -12,8 +12,8 @@ import {
 import { generateBotActions } from '../engine/BotSimulator';
 import {
   API_BASE, API_LOGIN, API_USER_STATS,
-  API_ROOM_CREATE, API_ROOM_JOIN, API_ROOM_GET,
-  API_ROOM_START, API_ROOM_ACTION,
+  API_ROOM_CREATE, API_ROOM_JOIN, API_ROOM_QUICK_MATCH, API_ROOM_GET,
+  API_ROOM_START, API_ROOM_ACTION, API_ROOM_ADD_BOT,
   API_ROOM_PHASE_READY, API_ROOM_PHASE_STATUS,
 } from '../services/api';
 
@@ -149,14 +149,28 @@ function gameReducer(state, action) {
 
     case ACTIONS.ADD_BOT: {
       if (state.players.length >= 10) return state;
-      const botIndex = state.players.filter(p => p.isBot).length;
-      const bot = {
-        id: 'bot_' + Date.now() + '_' + botIndex,
-        name: BOT_NAMES[botIndex % BOT_NAMES.length],
-        isBot: true,
-        isHost: false,
-        colorIndex: state.players.length,
-      };
+      const bot = action.payload;
+      // If no payload (legacy call), generate one
+      if (!bot) {
+        const botIndex = state.players.filter(p => p.isBot).length;
+        // Find a unique name
+        let name = BOT_NAMES[botIndex % BOT_NAMES.length];
+        let nameCounter = 1;
+        while (state.players.find(p => p.name === name)) {
+          name = `${BOT_NAMES[botIndex % BOT_NAMES.length]} ${nameCounter++}`;
+        }
+        
+        const fallbackBot = {
+          id: 'bot_' + Date.now() + '_' + botIndex,
+          name,
+          isBot: true,
+          isHost: false,
+          colorIndex: state.players.length,
+        };
+        return { ...state, players: [...state.players, fallbackBot] };
+      }
+      // Check for duplicates by ID
+      if (state.players.find(p => p.id === bot.id)) return state;
       return {
         ...state,
         players: [...state.players, bot],
@@ -280,6 +294,9 @@ function gameReducer(state, action) {
       const { room } = action.payload;
       const myId = state.user?.id || state.user?._id || state.user?.googleId;
       
+      const newTotals = calculateTotals(room.roundHistory || []);
+      const newRankings = getRankings(room.players, newTotals);
+      
       return {
         ...state,
         room,
@@ -289,6 +306,8 @@ function gameReducer(state, action) {
         totalRounds: room.totalRounds || state.totalRounds,
         isHost: room.hostId === myId,
         myPlayerId: state.myPlayerId || myId,
+        totals: newTotals,
+        rankings: newRankings,
       };
     }
 
@@ -300,6 +319,7 @@ function gameReducer(state, action) {
 // --- Provider ---
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [activeEmotes, setActiveEmotes] = useState({});
   const socketRef = useRef(null);
 
   // ─── Socket Lifecycle (FIX BUG-03 + D01) ───────────────────────────
@@ -378,16 +398,31 @@ export function GameProvider({ children }) {
       }
     };
 
+    const handleMessage = (data) => {
+      if (data.isEmoji) {
+        setActiveEmotes((prev) => ({ ...prev, [data.senderId]: data.text }));
+        setTimeout(() => {
+          setActiveEmotes((prev) => {
+            const next = { ...prev };
+            delete next[data.senderId];
+            return next;
+          });
+        }, 3000);
+      }
+    };
+
     socket.on('round_result', handleRoundResult);
     socket.on('new_round', handleNewRound);
     socket.on('room_update', handleRoomUpdate);
     socket.on('phase_change', handlePhaseChange);
+    socket.on('receive_message', handleMessage);
     
     return () => {
       socket.off('round_result', handleRoundResult);
       socket.off('new_round', handleNewRound);
       socket.off('room_update', handleRoomUpdate);
       socket.off('phase_change', handlePhaseChange);
+      socket.off('receive_message', handleMessage);
     };
   }, [state.room, state.user]);
 
@@ -417,7 +452,7 @@ export function GameProvider({ children }) {
     dispatch({ type: ACTIONS.LOGOUT });
   }, []);
 
-  const createRoom = useCallback(async (totalRounds) => {
+  const createRoom = useCallback(async (totalRounds, botDifficulty = 'rookie') => {
     try {
       const code = generateRoomCode();
       const res = await fetch(API_ROOM_CREATE, {
@@ -427,7 +462,8 @@ export function GameProvider({ children }) {
           code,
           hostId: state.user.id || state.user._id || state.user.googleId,
           hostName: state.user.name,
-          totalRounds
+          totalRounds,
+          botDifficulty
         })
       });
       const data = await res.json();
@@ -463,9 +499,58 @@ export function GameProvider({ children }) {
     return false;
   }, [state.user]);
 
-  const addBot = useCallback(() => {
-    dispatch({ type: ACTIONS.ADD_BOT });
-  }, []);
+  const quickMatch = useCallback(async () => {
+    try {
+      const res = await fetch(API_ROOM_QUICK_MATCH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: state.user.id || state.user._id || state.user.googleId,
+          playerName: state.user.name
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.code) {
+        return await joinRoom(data.code);
+      }
+    } catch (err) {
+      console.error("Quick match failed", err);
+    }
+    return false;
+  }, [state.user, joinRoom]);
+
+  const addBot = useCallback(async () => {
+    if (state.players.length >= 10 || !state.room) return;
+    
+    const botIndex = state.players.filter(p => p.isBot).length;
+    // Ensure unique name
+    let name = BOT_NAMES[botIndex % BOT_NAMES.length];
+    let nameCounter = 1;
+    while (state.players.find(p => p.name === name)) {
+      name = `${BOT_NAMES[botIndex % BOT_NAMES.length]} ${nameCounter++}`;
+    }
+
+    const bot = {
+      id: 'bot_' + Date.now() + '_' + botIndex,
+      name,
+      isBot: true,
+      isHost: false,
+      colorIndex: state.players.length,
+    };
+
+    try {
+      const { API_ROOM_ADD_BOT } = await import('../services/api');
+      await fetch(API_ROOM_ADD_BOT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: state.room.code, bot })
+      });
+      // Local state will be updated by room polling or socket event
+      dispatch({ type: ACTIONS.ADD_BOT, payload: bot }); 
+    } catch (err) {
+      console.error("Failed to add bot", err);
+    }
+  }, [state.players, state.room]);
 
   const removePlayer = useCallback((playerId) => {
     dispatch({ type: ACTIONS.REMOVE_PLAYER, payload: { playerId } });
@@ -602,6 +687,25 @@ export function GameProvider({ children }) {
     }
   }, [state.user]);
 
+  const refreshRoom = useCallback(async () => {
+    if (!state.room) return;
+    const myId = state.user?.id || state.user?._id || state.user?.googleId;
+    try {
+      const res = await fetch(API_ROOM_GET(state.room.code, myId));
+      const data = await res.json();
+      if (data.success) {
+        dispatch({ type: ACTIONS.SYNC_ROOM, payload: { room: data.room } });
+        if (data.room.lastResult) {
+          dispatch({ type: ACTIONS.RESOLVE_ROUND, payload: data.room.lastResult });
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error("Manual refresh failed", err);
+    }
+    return false;
+  }, [state.room, state.user]);
+
   const value = {
     ...state,
     login,
@@ -610,6 +714,7 @@ export function GameProvider({ children }) {
     logout,
     createRoom,
     joinRoom,
+    quickMatch,
     addBot,
     removePlayer,
     startGame,
@@ -622,6 +727,8 @@ export function GameProvider({ children }) {
     reset,
     phaseReady,
     pollPhaseStatus,
+    refreshRoom,
+    activeEmotes,
   };
 
   return (

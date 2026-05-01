@@ -18,6 +18,11 @@ const RoomSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  botDifficulty: {
+    type: String,
+    enum: ['rookie', 'pro', 'expert'],
+    default: 'rookie'
+  },
   players: [{
     id: String,
     name: String,

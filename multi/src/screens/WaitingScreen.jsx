@@ -4,22 +4,42 @@ import { useGame } from '../context/GameContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import CardComponent from '../components/CardComponent';
 import { ROLES } from '../engine/GameEngine';
+import { API_BASE } from '../services/api';
 import './WaitingScreen.css';
 
 const SHUFFLE_ROLES = [ROLES.RAJA, ROLES.RANI, ROLES.POLICE, ROLES.THIEF, ROLES.MANTRI, ROLES.SOLDIER];
 
 export default function WaitingScreen() {
-  const { roundResult } = useGame();
+  const { roundResult, phase, room, myPlayerId, refreshRoom } = useGame();
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [shuffleIndex, setShuffleIndex] = useState(0);
 
   // Wait for both the loading animation AND the server's websocket result
   useEffect(() => {
-    if (progress >= 100 && roundResult) {
+    // Navigate if we have the result OR if the global phase has already moved to result
+    if (progress >= 100 && (roundResult || phase === 'result')) {
       setTimeout(() => navigate('/result'), 400);
     }
-  }, [progress, roundResult, navigate]);
+  }, [progress, roundResult, phase, navigate]);
+
+
+  // Fallback: If we are stuck at 100% and don't have a result, poll the server
+  useEffect(() => {
+    if (progress < 100 || roundResult || phase === 'result') return;
+
+    const interval = setInterval(async () => {
+      console.log("WaitingScreen: Stuck at 100%. Forcing phase refresh...");
+      const success = await refreshRoom();
+      if (success && phase === 'result') {
+        console.log("WaitingScreen: Server is in result phase! Navigating...");
+        navigate('/result');
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [progress, roundResult, phase, room, myPlayerId, navigate]);
+
 
   useEffect(() => {
     const steps = [20, 45, 70, 85, 100];
