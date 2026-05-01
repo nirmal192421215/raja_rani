@@ -16,12 +16,7 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://raja-rani-game.vercel.app',
-    'https://raja-rani-4dv1.vercel.app'
-  ],
+  origin: true, // Reflect request origin to avoid CORS mismatches
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -29,6 +24,19 @@ app.use(cors({
 app.use(express.json({ limit: '10kb' })); // Rate limit payload size
 
 let DB_READY = false;
+
+// ─── ROUTES ───────────────────────────────────────────────────────────
+
+// Enhanced Status Route for Debugging
+app.get('/api/status', (req, res) => {
+  res.json({ 
+    status: 'API is running',
+    database: DB_READY ? 'Connected ✅' : 'Disconnected ❌',
+    time: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 let mockRooms = new Map();
 let mockUsers = new Map();
 
