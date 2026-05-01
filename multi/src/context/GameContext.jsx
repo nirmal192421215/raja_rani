@@ -339,34 +339,47 @@ export function GameProvider({ children }) {
     }
   }, [state.user]);
 
-  // --- Real-time Polling for Lobby & System ---
+  // --- Real-time Polling for Lobby & System (Vercel Compatibility Fix) ---
   useEffect(() => {
     let interval;
-    if (state.phase === 'lobby' && state.room) {
+    // Poll if we are in a room and not at the end of the game
+    const shouldPoll = state.room && state.phase !== 'leaderboard' && state.phase !== 'idle';
+    
+    if (shouldPoll) {
       const myId = state.user?.id || state.user?._id || state.user?.googleId;
       interval = setInterval(async () => {
         try {
-          // FIX BUG-01: Pass playerId for server-side sanitization
           const res = await fetch(API_ROOM_GET(state.room.code, myId));
           const data = await res.json();
-          if (data.success) {
-            // 1. Sync players
-            if (JSON.stringify(data.room.players) !== JSON.stringify(state.players)) {
-              dispatch({ type: ACTIONS.JOIN_ROOM, payload: { room: data.room } });
-            }
+          if (data.success && data.room) {
+            // Authoritatively sync room state from server
+            const serverRoom = data.room;
             
-            // 2. Sync game start (for non-hosts) using SERVER roles
-            if (!state.isHost && data.room.status === 'playing') {
-              dispatch({ type: ACTIONS.SYNC_GAME_START, payload: { room: data.room } });
+            // 1. Sync Phase / Status
+            if (serverRoom.currentPhase !== state.phase) {
+               // If server says roleReveal, it means match started or round advanced
+               if (serverRoom.currentPhase === 'roleReveal') {
+                 dispatch({ type: ACTIONS.SYNC_GAME_START, payload: { room: serverRoom } });
+               } else {
+                 dispatch({ type: ACTIONS.SET_PHASE, payload: { phase: serverRoom.currentPhase } });
+               }
             }
+
+            // 2. Sync Round Result if available
+            if (serverRoom.lastResult && (!state.roundResult || state.roundResult.id !== serverRoom.lastResult.id)) {
+               dispatch({ type: ACTIONS.RESOLVE_ROUND, payload: serverRoom.lastResult });
+            }
+
+            // 3. General Room Sync (Players, Totals, etc.)
+            dispatch({ type: ACTIONS.SYNC_ROOM, payload: { room: serverRoom } });
           }
         } catch (err) {
-          console.error("Polling error", err);
+          console.warn("Polling fallback error (Safe to ignore if intermittent)", err);
         }
-      }, 2500); 
+      }, 2000); // Poll every 2 seconds
     }
     return () => clearInterval(interval);
-  }, [state.phase, state.room, state.players, state.user]);
+  }, [state.phase, state.room, state.user, state.roundResult]);
 
   // --- Real-Time Sockets for Gameplay ---
   useEffect(() => {

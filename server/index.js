@@ -669,34 +669,40 @@ app.post('/api/room/quick-match', async (req, res) => {
     if (!roomCode) {
       console.log(`No open lobby for Quick Play. Creating new one for ${playerName}`);
       roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const newRoom = {
+      let newRoomData = {
         code: roomCode,
         hostId: playerId,
         hostName: playerName,
-        status: 'lobby',
-        players: [{ id: playerId, name: playerName, isHost: true, isReady: true }],
-        currentRound: 0,
+        status: 'playing', // Start immediately
+        players: [{ id: playerId, name: playerName, isHost: true, isReady: true, colorIndex: 0 }],
+        currentRound: 1,
         totalRounds: 5,
-        currentPhase: 'waiting',
-        createdAt: new Date()
+        currentPhase: 'roleReveal',
+        createdAt: new Date(),
+        roundHistory: [],
+        pendingActions: {}
       };
 
       // Auto-add 3 bots for an instant 4-player game (Sprint 5 Feature)
       const botNames = ["Arjun", "Zara", "Vikram", "Ishita", "Rahul", "Priya"];
       for (let i = 0; i < 3; i++) {
         const botName = botNames[Math.floor(Math.random() * botNames.length)] + " (AI)";
-        newRoom.players.push({
+        newRoomData.players.push({
           id: `bot_${Math.random().toString(36).substr(2, 9)}`,
           name: botName,
           isBot: true,
-          isReady: true
+          isReady: true,
+          colorIndex: i + 1
         });
       }
 
+      // Assign roles authoritatively
+      newRoomData.players = assignRoles(newRoomData.players);
+
       if (DB_READY) {
-        await new Room(newRoom).save();
+        await new Room(newRoomData).save();
       } else {
-        mockRooms.set(roomCode, newRoom);
+        mockRooms.set(roomCode, newRoomData);
       }
     }
 
