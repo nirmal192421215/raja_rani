@@ -30,12 +30,16 @@ let lastError = null;
 
 // Enhanced Status Route for Debugging
 app.get('/api/status', (req, res) => {
+  const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
+  const state = mongoose.connection.readyState;
+  
   res.json({ 
     status: 'API is running',
-    database: DB_READY ? 'Connected ✅' : 'Disconnected ❌',
-    error: lastError,
+    database_status: states[state],
+    database: state === 1 ? 'Connected ✅' : 'Disconnected ❌',
+    mongodb_uri_set: !!process.env.MONGODB_URI,
     time: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'production'
   });
 });
 
