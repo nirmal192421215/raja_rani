@@ -21,25 +21,12 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 5001;
 
 // Middleware
+// Aggressive CORS for Vercel
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = [
-    'https://raja-rani-game.vercel.app',
-    'https://raja-rani-4dv1.vercel.app',
-    'http://localhost:5173'
-  ];
-  
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', true);
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
@@ -50,30 +37,17 @@ let lastError = null;
 
 // ─── ROUTES ───────────────────────────────────────────────────────────
 
-// Enhanced Status Route for Debugging
+// Enhanced Status Route
 app.get('/api/status', async (req, res) => {
-  const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
-  
-  // Force a quick check/wait if not connected
-  if (mongoose.connection.readyState !== 1) {
-    try {
-      await mongoose.connect(process.env.MONGODB_URI, { 
-        serverSelectionTimeoutMS: 3000 
-      });
-    } catch (err) {
-      console.error('Wait failed:', err.message);
-    }
-  }
-
   const state = mongoose.connection.readyState;
+  const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
   
   res.json({ 
     status: 'API is running',
-    database_status: states[state],
     database: state === 1 ? 'Connected ✅' : 'Disconnected ❌',
-    mongodb_uri_set: !!process.env.MONGODB_URI,
-    time: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production'
+    database_status: states[state],
+    uri_preview: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 15) + '...' : 'MISSING',
+    time: new Date().toISOString()
   });
 });
 
