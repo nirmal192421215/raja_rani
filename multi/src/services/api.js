@@ -3,7 +3,8 @@
 // Single source of truth for all API URLs
 // =============================================
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+// HARDCODED FOR PRODUCTION STABILITY
+export const API_BASE = 'https://raja-rani-nirmal192421215s-projects.vercel.app';
 
 // Auth
 export const API_LOGIN = `${API_BASE}/api/auth/login`;
