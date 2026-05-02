@@ -10,10 +10,9 @@
     {
       "src": "/(.*)",
       "headers": {
-        "Access-Control-Allow-Origin": "https://raja-rani-game.vercel.app",
+        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS,PUT,PATCH,DELETE",
-        "Access-Control-Allow-Headers": "X-Requested-With,Content-Type,Authorization",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Headers": "X-Requested-With,Content-Type,Authorization"
       },
       "dest": "index.js"
     }
