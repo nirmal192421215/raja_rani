@@ -39,14 +39,29 @@ let lastError = null;
 
 // Enhanced Status Route
 app.get('/api/status', async (req, res) => {
-  const state = mongoose.connection.readyState;
+  let state = mongoose.connection.readyState;
+  let connectionError = null;
+
+  // If not connected, force a connection attempt and wait
+  if (state !== 1) {
+    try {
+      console.log('Force connecting to MongoDB...');
+      await mongoose.connect(process.env.MONGODB_URI, { 
+        serverSelectionTimeoutMS: 5000 
+      });
+      state = mongoose.connection.readyState;
+    } catch (err) {
+      connectionError = err.message;
+    }
+  }
+
   const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
   
   res.json({ 
     status: 'API is running',
     database: state === 1 ? 'Connected ✅' : 'Disconnected ❌',
     database_status: states[state],
-    error: lastError, // Showing the real error again
+    error: connectionError,
     uri_preview: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 15) + '...' : 'MISSING',
     time: new Date().toISOString()
   });
