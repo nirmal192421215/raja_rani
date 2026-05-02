@@ -29,8 +29,20 @@ let lastError = null;
 // ─── ROUTES ───────────────────────────────────────────────────────────
 
 // Enhanced Status Route for Debugging
-app.get('/api/status', (req, res) => {
+app.get('/api/status', async (req, res) => {
   const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
+  
+  // Force a quick check/wait if not connected
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI, { 
+        serverSelectionTimeoutMS: 3000 
+      });
+    } catch (err) {
+      console.error('Wait failed:', err.message);
+    }
+  }
+
   const state = mongoose.connection.readyState;
   
   res.json({ 
